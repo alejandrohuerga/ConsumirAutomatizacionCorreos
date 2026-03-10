@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor de Correos - API n8n</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background-color: #f4f4f9; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+        th { background-color: #ff6d5a; color: white; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .status { padding: 10px; color: #666; font-style: italic; }
+    </style>
+</head>
+<body>
+
+    <h2>📥 Correos Registrados (Actualización automática)</h2>
+    <div id="status" class="status">Actualizando datos...</div>
+
+    <table id="tabla-correos">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Remitente</th>
+                <th>Asunto</th>
+                <th>Fecha</th>
+                <th>Mensaje</th>
+            </tr>
+        </thead>
+        <tbody>
+            </tbody>
+    </table>
+
+    <script>
+    // URL de tu nodo Webhook
+    const N8N_WEB_HOOK_URL = 'https://qinamical.app.n8n.cloud/webhook/emails';
+
+        async function obtenerDatos() {
+            try {
+                const response = await fetch(N8N_WEB_HOOK_URL);
+                const datos = await response.json();
+                
+                // Opcional: Ordenar por ID para que el más nuevo esté arriba
+                datos.sort((a, b) => b.ID - a.ID);
+
+                const tbody = document.querySelector('#tabla-correos tbody');
+                tbody.innerHTML = ''; 
+
+                datos.forEach(correo => {
+                    // 1. AJUSTE DE HORA: Convertimos y sumamos 1 hora
+                    let fechaObj = new Date(correo.Fecha);
+                    fechaObj.setHours(fechaObj.getHours() + 1);
+                    
+                    // Formato legible en español (DD/MM/YYYY HH:MM:SS)
+                    const fechaFinal = fechaObj.toLocaleString('es-ES');
+
+                    // 2. LIMITAR TEXTO: Usamos la variable que definiste
+                    const textoCorto = correo.Texto && correo.Texto.length > 50 
+                        ? correo.Texto.substring(0, 50) + '...' 
+                        : correo.Texto;
+
+                    const fila = `
+                        <tr>
+                            <td><strong>#${correo.ID}</strong></td>
+                            <td>${correo.Remitente}</td>
+                            <td>${correo.Asunto}</td>
+                            <td style="white-space: nowrap;">${fechaFinal}</td>
+                            <td title="${correo.Texto}">${textoCorto}</td>
+                        </tr>
+                    `;
+                    tbody.innerHTML += fila;
+                });
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+        setInterval(obtenerDatos, 10000); 
+        obtenerDatos();
+    </script>
+</body>
+</html>
